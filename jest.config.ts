@@ -8,8 +8,12 @@ const config: Config = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
+    // Transform TypeScript and JavaScript files with ts-jest
+    // The JS transform is needed for @faker-js/faker which ships as pure ESM
+    '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json', allowJs: true }],
   },
+  // Allow @faker-js/faker to be transformed (it ships as pure ESM)
+  transformIgnorePatterns: ['node_modules/(?!(@faker-js/faker)/)'],
 };
 
 export default config;

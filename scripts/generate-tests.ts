@@ -163,15 +163,18 @@ ${sourceCode}
 ## Requirements
 
 1. Use Jest with TypeScript (ts-jest). Import from \`'${importPath}'\`.
-2. Cover every exported function, class, and constant.
-3. Include happy-path tests, edge cases, and error/boundary conditions.
-4. Use \`describe\` blocks to group related tests.
-5. Use \`supertest\` for any Express route tests (import \`app\` from the module if it exports one).
-6. Do NOT test private/internal implementation details — only the public API.
-7. Each test must have a clear, descriptive name.
-8. Do NOT include any markdown fences or explanation — output ONLY the raw TypeScript test file content.
-9. The file must compile with strict TypeScript (no implicit any, proper types).
-10. Module: \`${moduleName}\`
+2. Use \`@faker-js/faker\` to generate ALL test data — strings, numbers, IDs, emails, URLs, etc.
+   Import it as: \`import { faker } from '@faker-js/faker/locale/en';\`
+   Never use hardcoded literals like \`'test'\`, \`123\`, or \`'foo@bar.com'\` — always use Faker.
+3. Cover every exported function, class, and constant.
+4. Include happy-path tests, edge cases, and error/boundary conditions.
+5. Use \`describe\` blocks to group related tests.
+6. Use \`supertest\` for any Express route tests (import \`app\` from the module if it exports one).
+7. Do NOT test private/internal implementation details — only the public API.
+8. Each test must have a clear, descriptive name.
+9. Do NOT include any markdown fences or explanation — output ONLY the raw TypeScript test file content.
+10. The file must compile with strict TypeScript (no implicit any, proper types).
+11. Module: \`${moduleName}\`
 
 Output only the TypeScript source code of the test file, starting with the imports.`;
 }

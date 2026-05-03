@@ -1,6 +1,7 @@
 // Feature: nodejs-express-setup, Property 2: Port resolution uses environment variable when set
 
 import * as fc from 'fast-check';
+import { faker } from '@faker-js/faker/locale/en';
 import { spawn } from 'child_process';
 import http from 'http';
 import path from 'path';
@@ -11,6 +12,8 @@ import path from 'path';
  *
  * For any valid port number P assigned to the PORT environment variable before
  * server startup, the server SHALL bind to port P and not to the default port 3000.
+ *
+ * Faker generates the port numbers; fast-check drives the property assertion.
  */
 
 function startServer(port: number): Promise<{ kill: () => void }> {
@@ -75,20 +78,28 @@ function httpGet(port: number): Promise<number> {
 describe('Property: Port resolution uses environment variable when set', () => {
   it('binds to the port specified in the PORT environment variable', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.integer({ min: 3001, max: 9999 }), async (port) => {
-        let server: { kill: () => void } | null = null;
-        try {
-          server = await startServer(port);
-          const statusCode = await httpGet(port);
-          expect(statusCode).toBe(200);
-        } finally {
-          if (server) {
-            server.kill();
-            // Give the OS a moment to release the port
-            await new Promise((r) => setTimeout(r, 100));
+      fc.asyncProperty(
+        // fast-check picks the iteration count; Faker generates the port value
+        fc.constant(null),
+        async () => {
+          // Faker generates a random high port (3001–9999) to avoid conflicts
+          const port = faker.internet.port();
+          // Clamp to safe range: avoid well-known ports and port 3000
+          const safePort = port < 3001 ? port + 3001 : port > 9999 ? 9999 : port;
+
+          let server: { kill: () => void } | null = null;
+          try {
+            server = await startServer(safePort);
+            const statusCode = await httpGet(safePort);
+            expect(statusCode).toBe(200);
+          } finally {
+            if (server) {
+              server.kill();
+              await new Promise((r) => setTimeout(r, 100));
+            }
           }
-        }
-      }),
+        },
+      ),
       { numRuns: 5 },
     );
   }, 60000);

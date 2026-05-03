@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@faker-js/faker": "10.4.0",
     "@tailwindcss/cli": "4.2.4",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
