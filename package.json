@@ -1,0 +1,65 @@
+{
+  "name": "ai-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "css:build": "npx @tailwindcss/cli -i src/styles/main.css -o dist/styles/main.css",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ts-geek02/AI-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ts-geek02/AI-demo/issues"
+  },
+  "homepage": "https://github.com/ts-geek02/AI-demo#readme",
+  "dependencies": {
+    "express": "5.2.1"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@tailwindcss/cli": "4.2.4",
+    "@types/express": "5.0.6",
+    "@types/jest": "30.0.0",
+    "@types/node": "25.6.0",
+    "@types/supertest": "7.2.0",
+    "eslint": "10.2.1",
+    "eslint-config-prettier": "10.1.8",
+    "fast-check": "4.7.0",
+    "husky": "9.1.7",
+    "jest": "30.3.0",
+    "lint-staged": "16.4.0",
+    "prettier": "3.8.3",
+    "supertest": "7.2.2",
+    "tailwindcss": "4.2.4",
+    "ts-jest": "29.4.9",
+    "ts-node": "10.9.2",
+    "tsx": "4.21.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.59.0"
+  }
+}
