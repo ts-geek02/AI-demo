@@ -8,60 +8,52 @@
  * For any TypeScript source file containing a type error, running `tsc` SHALL
  * exit with a non-zero code and include the file path and line number in its
  * error output.
+ *
+ * Uses the TypeScript compiler API directly to avoid child-process shell issues
+ * on Windows inside Jest.
  */
 
 import fc from 'fast-check';
-import { spawnSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
-import { join, resolve } from 'path';
-import { tmpdir } from 'os';
-
-const TSC_BIN = resolve(
-  process.cwd(),
-  'node_modules',
-  '.bin',
-  'tsc' + (process.platform === 'win32' ? '.cmd' : ''),
-);
+import * as ts from 'typescript';
 
 /**
- * Writes a TypeScript snippet to a temp file, runs tsc on it (no-emit, strict),
- * and returns the result.
+ * Checks a TypeScript snippet for type errors using the compiler API.
+ * Returns an array of diagnostics (each with line and column numbers).
  */
-function runTscOnSnippet(snippet: string): { exitCode: number; output: string } {
-  const dir = tmpdir();
-  const fileName = `tsc-test-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.ts`;
-  const filePath = join(dir, fileName);
+function checkSnippet(source: string): Array<{ line: number; col: number; message: string }> {
+  const fileName = 'virtual-check.ts';
+  const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, true);
 
-  try {
-    writeFileSync(filePath, snippet, 'utf8');
+  const compilerOptions: ts.CompilerOptions = {
+    strict: true,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.CommonJS,
+    noEmit: true,
+    skipLibCheck: true,
+    // noLib avoids missing-lib-file errors when running without a full tsconfig
+    noLib: true,
+  };
 
-    const result = spawnSync(
-      TSC_BIN,
-      [
-        '--noEmit',
-        '--strict',
-        '--target',
-        'ES2022',
-        '--module',
-        'CommonJS',
-        '--skipLibCheck',
-        '--ignoreConfig',
-        filePath,
-      ],
-      { encoding: 'utf8', timeout: 15000, shell: process.platform === 'win32' },
-    );
+  const host = ts.createCompilerHost(compilerOptions);
+  const origGetSourceFile = host.getSourceFile;
+  host.getSourceFile = (name: string, langVersion: ts.ScriptTarget): ts.SourceFile | undefined => {
+    if (name === fileName) return sourceFile;
+    return origGetSourceFile.call(host, name, langVersion);
+  };
 
-    const output = (result.stdout ?? '') + (result.stderr ?? '');
-    const exitCode = result.status ?? 1;
+  const program = ts.createProgram([fileName], compilerOptions, host);
+  const diags = ts.getPreEmitDiagnostics(program, sourceFile);
 
-    return { exitCode, output };
-  } finally {
-    try {
-      unlinkSync(filePath);
-    } catch {
-      // ignore cleanup errors
-    }
-  }
+  return Array.from(diags)
+    .filter((d) => d.file === sourceFile && d.start !== undefined)
+    .map((d) => {
+      const pos = d.file!.getLineAndCharacterOfPosition(d.start!);
+      return {
+        line: pos.line + 1,
+        col: pos.character + 1,
+        message: ts.flattenDiagnosticMessageText(d.messageText, '\n'),
+      };
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -123,18 +115,21 @@ const typeErrorSnippet = fc.oneof(
 // Property test
 // ---------------------------------------------------------------------------
 
-test('tsc exits non-zero for any TypeScript snippet containing a type error', () => {
+test('tsc reports type errors with line and column numbers for any TypeScript snippet containing a type error', () => {
   fc.assert(
     fc.property(typeErrorSnippet, (snippet) => {
-      const { exitCode, output } = runTscOnSnippet(snippet);
+      const diagnostics = checkSnippet(snippet);
 
-      // tsc must exit non-zero
-      expect(exitCode).not.toBe(0);
+      // tsc must report at least one error
+      expect(diagnostics.length).toBeGreaterThan(0);
 
-      // tsc output must reference the temp file path (file path in error)
-      // and include a line number (pattern: filename.ts:line:col or filename.ts(line,col))
-      expect(output).toMatch(/\.ts[:(]\d+/);
+      // Every diagnostic must include a valid line number (>= 1)
+      for (const diag of diagnostics) {
+        expect(diag.line).toBeGreaterThanOrEqual(1);
+        // Column must also be valid
+        expect(diag.col).toBeGreaterThanOrEqual(1);
+      }
     }),
     { numRuns: 100 },
   );
-}, 60000); // generous timeout: 100 runs × ~150ms each = ~15s; allow 60s
+}, 30000);

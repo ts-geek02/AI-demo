@@ -1,1 +1,2 @@
+npx tsx scripts/generate-tests.ts
 npm test

@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "generate-tests": "tsx scripts/generate-tests.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",

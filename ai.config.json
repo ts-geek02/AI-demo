@@ -1,0 +1,10 @@
+{
+  "provider": "grok",
+  "model": "grok-3-mini",
+  "testDir": "src/__tests__",
+  "sourceDir": "src",
+  "sourceExtensions": [".ts"],
+  "excludePatterns": ["**/__tests__/**", "**/*.test.ts", "**/*.spec.ts", "**/styles/**"],
+  "maxTokens": 4096,
+  "temperature": 0.2
+}

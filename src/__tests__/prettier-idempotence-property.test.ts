@@ -15,12 +15,8 @@ import * as path from 'path';
  * applying it once.
  */
 
-const prettierBin = path.resolve(
-  process.cwd(),
-  'node_modules',
-  '.bin',
-  'prettier' + (process.platform === 'win32' ? '.cmd' : ''),
-);
+// Run prettier via `node prettier.cjs` to avoid shell:true hanging on Windows inside Jest
+const prettierJs = path.resolve(process.cwd(), 'node_modules', 'prettier', 'bin', 'prettier.cjs');
 
 const projectRoot = process.cwd();
 
@@ -35,10 +31,10 @@ describe('Property: Prettier format-check is idempotent', () => {
           fs.writeFileSync(tempFilePath, source, 'utf8');
 
           // Step 1: Format the file with prettier --write
-          const writeResult = spawnSync(prettierBin, ['--write', tempFilePath], {
+          const writeResult = spawnSync(process.execPath, [prettierJs, '--write', tempFilePath], {
             cwd: projectRoot,
             encoding: 'utf8',
-            shell: process.platform === 'win32',
+            shell: false,
           });
 
           // If prettier --write fails (e.g. unparseable content), skip this case
@@ -47,10 +43,10 @@ describe('Property: Prettier format-check is idempotent', () => {
           }
 
           // Step 2: Run prettier --check on the now-formatted file
-          const checkResult = spawnSync(prettierBin, ['--check', tempFilePath], {
+          const checkResult = spawnSync(process.execPath, [prettierJs, '--check', tempFilePath], {
             cwd: projectRoot,
             encoding: 'utf8',
-            shell: process.platform === 'win32',
+            shell: false,
           });
 
           // prettier --check must exit 0 (file is already formatted)

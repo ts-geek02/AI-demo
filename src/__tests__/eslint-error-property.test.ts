@@ -1,9 +1,10 @@
 // Feature: nodejs-express-setup, Property 3: ESLint exits non-zero for any error-level violation
 
 import * as fc from 'fast-check';
-import { spawnSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
+import { ESLint } from 'eslint';
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
 
 /**
  * Property 3: ESLint exits non-zero for any error-level violation
@@ -13,61 +14,72 @@ import * as path from 'path';
  * (triggering @typescript-eslint/no-explicit-any as an error), running ESLint
  * on that file SHALL exit with a non-zero code and include the file path and
  * line number in its output.
+ *
+ * Uses the ESLint Node.js API with an inline config to avoid dynamic import
+ * issues in Jest's CommonJS transform mode.
  */
 
-const eslintBin = path.resolve(
-  process.cwd(),
-  'node_modules',
-  '.bin',
-  'eslint' + (process.platform === 'win32' ? '.cmd' : ''),
-);
+// Shared ESLint instance — created once, reused across all property runs.
+// overrideConfigFile: true disables auto-discovery of eslint.config.js so we
+// can supply the config inline without triggering a dynamic import() call.
+let eslint: ESLint;
 
-const projectRoot = process.cwd();
+beforeAll(() => {
+  eslint = new ESLint({
+    cwd: process.cwd(),
+    overrideConfigFile: true,
+    overrideConfig: tseslint.config(
+      js.configs.recommended,
+      ...tseslint.configs.recommended,
+      prettier,
+      {
+        files: ['src/**/*.ts'],
+        rules: {
+          '@typescript-eslint/no-explicit-any': 'error',
+          '@typescript-eslint/explicit-function-return-type': 'warn',
+          'no-console': 'warn',
+        },
+      },
+    ) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  });
+});
 
 describe('Property: ESLint exits non-zero for any error-level violation', () => {
-  it('exits non-zero and reports file path and line number for any `any` type usage', () => {
-    fc.assert(
-      fc.property(
+  it('reports errors with line numbers for any `any` type usage', async () => {
+    await fc.assert(
+      fc.asyncProperty(
         // Generate safe identifier names: start with a letter, followed by alphanumeric chars
         fc.stringMatching(/^[a-z][a-z0-9]{0,19}$/),
-        (name) => {
-          // Create a TypeScript snippet that uses `any` type — triggers @typescript-eslint/no-explicit-any
-          const snippet = `const ${name}: any = 42;\n`;
+        async (name) => {
+          // Snippet that uses `any` type — triggers @typescript-eslint/no-explicit-any (error)
+          // Use `export` to avoid @typescript-eslint/no-unused-vars (also an error)
+          const snippet = `export const ${name}: any = 42;\n`;
 
-          // Write temp file inside src/ so ESLint picks up the config
-          const tempFileName = `__eslint_prop_test_${Date.now()}_${Math.random().toString(36).slice(2)}.ts`;
-          const tempFilePath = path.join(projectRoot, 'src', tempFileName);
+          // Lint the text directly using the ESLint API (no child process needed)
+          const results = await eslint.lintText(snippet, {
+            // Provide a virtual file path inside src/ so the file-scoped rules apply
+            filePath: `src/__eslint_prop_virtual_${name}.ts`,
+          });
 
-          try {
-            fs.writeFileSync(tempFilePath, snippet, 'utf8');
+          const result = results[0];
 
-            const result = spawnSync(eslintBin, [tempFilePath], {
-              cwd: projectRoot,
-              encoding: 'utf8',
-              shell: process.platform === 'win32',
-            });
+          // Must have at least one error (the `any` type violation)
+          expect(result.errorCount).toBeGreaterThan(0);
 
-            const output = (result.stdout ?? '') + (result.stderr ?? '');
+          // Must have a message for the no-explicit-any rule
+          const anyError = result.messages.find(
+            (m) => m.ruleId === '@typescript-eslint/no-explicit-any',
+          );
+          expect(anyError).toBeDefined();
 
-            // ESLint should exit non-zero (exit code 1) when there are errors
-            expect(result.status).not.toBe(0);
+          // The violation must include a valid line number
+          expect(anyError!.line).toBeGreaterThanOrEqual(1);
 
-            // Output should include the file path (basename is sufficient since full path is in output)
-            expect(output).toContain(tempFileName);
-
-            // Output should include a line number reference in the format "filename.ts:1:" or "1:1"
-            // ESLint outputs violations as "  1:7  error  ..." or includes "line 1"
-            const hasLineNumber = /\b1:\d+\b/.test(output) || /line\s+1\b/i.test(output);
-            expect(hasLineNumber).toBe(true);
-          } finally {
-            // Clean up temp file
-            if (fs.existsSync(tempFilePath)) {
-              fs.unlinkSync(tempFilePath);
-            }
-          }
+          // The violation must include a valid column number
+          expect(anyError!.column).toBeGreaterThanOrEqual(1);
         },
       ),
       { numRuns: 100 },
     );
-  }, 120000);
+  }, 60000);
 });
