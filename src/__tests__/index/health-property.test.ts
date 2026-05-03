@@ -2,7 +2,7 @@
 
 import * as fc from 'fast-check';
 import request from 'supertest';
-import { app } from '../index';
+import { app } from '../../index';
 
 /**
  * Property 1: Health endpoint always returns the correct shape

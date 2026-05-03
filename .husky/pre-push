@@ -1,2 +1,4 @@
 npx tsx scripts/generate-tests.ts
+npx tsc --noEmit
+npx tsx scripts/validate-structure.ts
 npm test
