@@ -1,0 +1,38 @@
+{
+  "version": 2,
+
+  "builds": [
+    {
+      "src": "dist/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/index.js"
+    }
+  ],
+
+  "env": {
+    "NODE_ENV": "production"
+  },
+
+  "buildCommand": "npm run build && npm run css:build",
+
+  "outputDirectory": "dist",
+
+  "regions": ["iad1"],
+
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+# =============================================================================
+# DigitalOcean App Platform — App Spec for ai-demo
+# =============================================================================
+#
+# This file defines the App Platform configuration.
+# Apply it with:
+#   doctl apps create --spec scripts/deploy/digitalocean/app-spec.yaml
+# Or update an existing app:
+#   doctl apps update <APP_ID> --spec scripts/deploy/digitalocean/app-spec.yaml
+#
+# Reference: https://docs.digitalocean.com/products/app-platform/reference/app-spec/
+#
+# =============================================================================
+
+name: ai-demo                              # FIXME: must be unique within your account
+
+region: nyc                                # FIXME: DigitalOcean region slug
+                                           #        run: doctl apps tier regions list
+
+services:
+  - name: web
+    # -------------------------------------------------------------------------
+    # Source — choose ONE of: github, gitlab, or image (Docker)
+    # -------------------------------------------------------------------------
+
+    # Option A: Deploy from GitHub (comment out Option B if using this)
+    github:
+      repo: ts-geek02/AI-demo              # FIXME: GitHub repo in "owner/repo" format
+      branch: main                         # FIXME: branch to deploy
+      deploy_on_push: true                 # FIXME: set to false to deploy manually only
+
+    # Option B: Deploy a pre-built Docker image (comment out Option A if using this)
+    # image:
+    #   registry_type: DOCR                # FIXME: DOCR = DigitalOcean Container Registry
+    #   registry: your-registry-name       # FIXME: your DOCR registry name
+    #   repository: ai-demo                # FIXME: image repository name
+    #   tag: latest                        # FIXME: image tag
+
+    # -------------------------------------------------------------------------
+    # Build & Run
+    # -------------------------------------------------------------------------
+    build_command: "npm ci && npm run build && npm run css:build"
+    run_command: "node dist/index.js"
+
+    environment_slug: node-js             # Tells App Platform to use a Node.js buildpack
+    http_port: 3000                        # FIXME: must match PORT env var
+
+    # -------------------------------------------------------------------------
+    # Instance sizing
+    # -------------------------------------------------------------------------
+    instance_size_slug: basic-xxs          # FIXME: see sizes: doctl apps tier list
+    instance_count: 1                      # FIXME: number of instances
+
+    # -------------------------------------------------------------------------
+    # Environment variables
+    # -------------------------------------------------------------------------
+    envs:
+      - key: NODE_ENV
+        value: "production"                # FIXME: "production" or "staging"
+        scope: RUN_AND_BUILD_TIME
+      - key: PORT
+        value: "3000"                      # FIXME: must match http_port above
+        scope: RUN_AND_BUILD_TIME
+      # FIXME: add any additional environment variables your app needs, e.g.:
+      # - key: DATABASE_URL
+      #   value: "postgres://..."
+      #   scope: RUN_TIME
+      #   type: SECRET
+
+    # -------------------------------------------------------------------------
+    # Health check
+    # -------------------------------------------------------------------------
+    health_check:
+      http_path: /health                   # FIXME: update if your health endpoint differs
+      initial_delay_seconds: 10
+      period_seconds: 30
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3

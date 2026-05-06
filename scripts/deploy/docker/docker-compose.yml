@@ -1,0 +1,60 @@
+# =============================================================================
+# Docker Compose — ai-demo
+# =============================================================================
+#
+# Usage:
+#   docker compose -f scripts/deploy/docker/docker-compose.yml up -d --build
+#
+# Environment variables are loaded from scripts/deploy/docker/.env.docker
+# Copy .env.docker to .env.docker.local and fill in secrets — never commit secrets.
+#
+# =============================================================================
+
+services:
+  ai-demo:
+    build:
+      context: ../../..                    # project root (3 levels up from this file)
+      dockerfile: scripts/deploy/docker/Dockerfile
+      args:
+        NODE_VERSION: "20"                 # FIXME: match your Node.js version
+        NODE_ENV: "${NODE_ENV:-production}"
+        PORT: "${PORT:-3000}"
+    image: ai-demo:latest
+    container_name: ai-demo
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:${PORT:-3000}" # FIXME: change HOST_PORT if 3000 is already in use
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      # FIXME: add any additional environment variables your app needs, e.g.:
+      # - DATABASE_URL=${DATABASE_URL}
+      # - API_KEY=${API_KEY}
+    env_file:
+      - .env.docker                        # FIXME: create this file from .env.docker template
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # FIXME: uncomment to persist data across container restarts
+    # volumes:
+    #   - app-data:/app/data
+
+  # FIXME: uncomment and configure if you need a reverse proxy (nginx)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: ai-demo-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #   depends_on:
+  #     - ai-demo
+
+# FIXME: uncomment if you added a volume above
+# volumes:
+#   app-data:

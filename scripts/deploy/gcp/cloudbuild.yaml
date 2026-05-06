@@ -1,0 +1,117 @@
+# =============================================================================
+# Google Cloud Build — CI/CD pipeline for ai-demo → Cloud Run
+# =============================================================================
+#
+# REQUIRED GCP IAM ROLES
+# Grant these to the Cloud Build service account
+# (format: <PROJECT_NUMBER>@cloudbuild.gserviceaccount.com):
+#
+#   roles/run.admin                  — deploy Cloud Run services
+#   roles/artifactregistry.writer    — push images to Artifact Registry
+#   roles/iam.serviceAccountUser     — act as the Cloud Run runtime SA
+#   roles/storage.objectViewer       — read source from GCS
+#
+# USAGE:
+#   gcloud builds submit --config scripts/deploy/gcp/cloudbuild.yaml .
+#
+# Or connect this file to a Cloud Build trigger in the GCP Console
+# to deploy automatically on every push to the target branch.
+#
+# SUBSTITUTION VARIABLES (set in Cloud Build trigger or --substitutions flag):
+#   _REGION          GCP region for Artifact Registry and Cloud Run
+#   _AR_REPO         Artifact Registry repository name
+#   _SERVICE_NAME    Cloud Run service name
+#   _APP_PORT        Port the container listens on
+#   _SERVICE_ACCOUNT Cloud Run runtime service account email
+#
+# =============================================================================
+
+substitutions:
+  _REGION: "us-central1"                                    # FIXME: your GCP region
+  _AR_REPO: "ai-demo-repo"                                  # FIXME: Artifact Registry repo name
+  _SERVICE_NAME: "ai-demo"                                  # FIXME: Cloud Run service name
+  _APP_PORT: "3000"                                         # FIXME: container port
+  # FIXME: Cloud Run runtime service account email
+  _SERVICE_ACCOUNT: "ai-demo-sa@PROJECT_ID.iam.gserviceaccount.com"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # -------------------------------------------------------------------------
+  # Step 1 — Install dependencies
+  # -------------------------------------------------------------------------
+  - name: "node:20-alpine"
+    id: install
+    entrypoint: npm
+    args: ["ci"]
+
+  # -------------------------------------------------------------------------
+  # Step 2 — Build TypeScript
+  # -------------------------------------------------------------------------
+  - name: "node:20-alpine"
+    id: build-ts
+    entrypoint: npm
+    args: ["run", "build"]
+    waitFor: ["install"]
+
+  # -------------------------------------------------------------------------
+  # Step 3 — Build CSS
+  # -------------------------------------------------------------------------
+  - name: "node:20-alpine"
+    id: build-css
+    entrypoint: npm
+    args: ["run", "css:build"]
+    waitFor: ["install"]
+
+  # -------------------------------------------------------------------------
+  # Step 4 — Build Docker image
+  # -------------------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: docker-build
+    args:
+      - build
+      - "--build-arg"
+      - "NODE_ENV=production"
+      - "--build-arg"
+      - "PORT=${_APP_PORT}"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:$SHORT_SHA"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:latest"
+      - "."
+    waitFor: ["build-ts", "build-css"]
+
+  # -------------------------------------------------------------------------
+  # Step 5 — Push image to Artifact Registry
+  # -------------------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: docker-push
+    args:
+      - push
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}"
+    waitFor: ["docker-build"]
+
+  # -------------------------------------------------------------------------
+  # Step 6 — Deploy to Cloud Run
+  # -------------------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_SERVICE_NAME}"
+      - "--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:$SHORT_SHA"
+      - "--platform=managed"
+      - "--region=${_REGION}"
+      - "--port=${_APP_PORT}"
+      - "--service-account=${_SERVICE_ACCOUNT}"
+      - "--set-env-vars=NODE_ENV=production,PORT=${_APP_PORT}"
+      - "--allow-unauthenticated"   # FIXME: remove if the service should require auth
+    waitFor: ["docker-push"]
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:$SHORT_SHA"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:latest"
