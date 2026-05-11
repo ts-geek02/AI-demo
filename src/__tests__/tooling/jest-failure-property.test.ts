@@ -18,7 +18,7 @@ const jestBin = path.resolve(
   process.cwd(),
   'node_modules',
   '.bin',
-  'jest' + (process.platform === 'win32' ? '.cmd' : ''),
+  `jest${process.platform === 'win32' ? '.cmd' : ''}`,
 );
 
 const projectRoot = process.cwd();

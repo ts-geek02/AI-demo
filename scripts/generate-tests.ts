@@ -109,15 +109,21 @@ function getChangedSourceFiles(config: AIConfig): string[] {
 /** Returns true if the file is a source file we should generate tests for */
 function isSourceFile(filePath: string, config: AIConfig): boolean {
   const ext = path.extname(filePath);
-  if (!config.sourceExtensions.includes(ext)) return false;
+  if (!config.sourceExtensions.includes(ext)) {
+    return false;
+  }
 
   // Must be inside sourceDir
   const normalised = filePath.replace(/\\/g, '/');
-  if (!normalised.startsWith(config.sourceDir.replace(/\\/g, '/') + '/')) return false;
+  if (!normalised.startsWith(`${config.sourceDir.replace(/\\/g, '/')}/`)) {
+    return false;
+  }
 
   // Must not match any exclude pattern
   for (const pattern of config.excludePatterns) {
-    if (matchesGlob(normalised, pattern)) return false;
+    if (matchesGlob(normalised, pattern)) {
+      return false;
+    }
   }
 
   return true;
@@ -183,13 +189,17 @@ Output only the TypeScript source code of the test file, starting with the impor
 function extractCode(response: string): string {
   // Strip markdown code fences if the AI included them despite instructions
   const fenceMatch = response.match(/```(?:typescript|ts)?\n([\s\S]*?)```/);
-  if (fenceMatch) return fenceMatch[1].trim();
+  if (fenceMatch?.[1] !== undefined) {
+    return fenceMatch[1].trim();
+  }
   return response.trim();
 }
 
 /** Commit newly generated test files */
 function commitGeneratedTests(files: string[]): void {
-  if (files.length === 0) return;
+  if (files.length === 0) {
+    return;
+  }
 
   for (const f of files) {
     spawnSync('git', ['add', f], { stdio: 'inherit' });
@@ -213,7 +223,7 @@ function commitGeneratedTests(files: string[]): void {
 
 async function main(): Promise<void> {
   // Allow skipping (e.g. in CI where tests are run separately)
-  if (process.env.SKIP_AI_TESTS === '1') {
+  if (process.env['SKIP_AI_TESTS'] === '1') {
     log('SKIP_AI_TESTS=1 — skipping test generation.');
     return;
   }
@@ -257,6 +267,8 @@ async function main(): Promise<void> {
 
   const generatedFiles: string[] = [];
 
+  // Process files sequentially — parallel requests would hammer the AI API
+  // rate limits and make error attribution harder.
   for (const sourceFile of filesToProcess) {
     const absSource = path.join(ROOT, sourceFile);
     if (!fs.existsSync(absSource)) {
@@ -273,6 +285,8 @@ async function main(): Promise<void> {
     let generatedCode: string;
     try {
       const prompt = buildPrompt(sourceFile, sourceCode, dest);
+      // Sequential awaits are intentional here — see comment above the loop
+      // eslint-disable-next-line no-await-in-loop
       const raw = await provider.complete(prompt, {
         model: config.model,
         maxTokens: config.maxTokens,
@@ -286,7 +300,7 @@ async function main(): Promise<void> {
 
     // Write the test file
     fs.mkdirSync(path.dirname(absDest), { recursive: true });
-    fs.writeFileSync(absDest, generatedCode + '\n', 'utf8');
+    fs.writeFileSync(absDest, `${generatedCode}\n`, 'utf8');
     log(`Written: ${dest}`);
     generatedFiles.push(dest);
   }

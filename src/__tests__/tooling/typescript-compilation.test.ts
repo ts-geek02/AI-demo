@@ -35,10 +35,12 @@ function checkSnippet(source: string): Array<{ line: number; col: number; messag
   };
 
   const host = ts.createCompilerHost(compilerOptions);
-  const origGetSourceFile = host.getSourceFile;
+  const origGetSourceFile = host.getSourceFile.bind(host);
   host.getSourceFile = (name: string, langVersion: ts.ScriptTarget): ts.SourceFile | undefined => {
-    if (name === fileName) return sourceFile;
-    return origGetSourceFile.call(host, name, langVersion);
+    if (name === fileName) {
+      return sourceFile;
+    }
+    return origGetSourceFile(name, langVersion);
   };
 
   const program = ts.createProgram([fileName], compilerOptions, host);

@@ -12,15 +12,15 @@ const ANTHROPIC_VERSION = '2023-06-01';
 export class AnthropicProvider implements AIProvider {
   private readonly apiKey: string;
 
-  constructor() {
-    const key = process.env.ANTHROPIC_API_KEY;
+  public constructor() {
+    const key = process.env['ANTHROPIC_API_KEY'];
     if (!key) {
       throw new Error('ANTHROPIC_API_KEY environment variable is not set.');
     }
     this.apiKey = key;
   }
 
-  async complete(prompt: string, options: CompletionOptions): Promise<string> {
+  public async complete(prompt: string, options: CompletionOptions): Promise<string> {
     const response = await fetch(`${BASE_URL}/messages`, {
       method: 'POST',
       headers: {
@@ -45,7 +45,8 @@ export class AnthropicProvider implements AIProvider {
       content: Array<{ type: string; text: string }>;
     };
 
-    const textBlock = data.content?.find((b) => b.type === 'text');
+    // data.content is typed as a non-nullable array — no optional chain needed
+    const textBlock = data.content.find((b) => b.type === 'text');
     if (!textBlock?.text) {
       throw new Error('Anthropic API returned an empty response');
     }

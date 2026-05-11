@@ -27,6 +27,9 @@ import prettier from 'eslint-config-prettier';
 let eslint: ESLint;
 
 beforeAll(() => {
+  // tseslint.config() returns a type incompatible with ESLint's overrideConfig parameter.
+  // The `as any` cast is unavoidable until typescript-eslint aligns these types.
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
   eslint = new ESLint({
     cwd: process.cwd(),
     overrideConfigFile: true,
@@ -42,8 +45,9 @@ beforeAll(() => {
           'no-console': 'warn',
         },
       },
-    ) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    ) as any,
   });
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
 });
 
 /** Arbitrary that generates a `no-console` warning snippet */

@@ -1,15 +1,56 @@
 {
   "compilerOptions": {
+    // -------------------------------------------------------------------------
+    // Target & Module
+    // -------------------------------------------------------------------------
     "target": "ES2022",
     "module": "CommonJS",
+    "moduleResolution": "bundler",
     "lib": ["ES2022"],
+
+    // -------------------------------------------------------------------------
+    // Output
+    // -------------------------------------------------------------------------
     "outDir": "dist",
     "rootDir": "src",
-    "strict": true,
+    "declaration": true, // emit .d.ts files alongside JS output
+    "declarationMap": true, // source maps for .d.ts — improves go-to-definition
+    "sourceMap": true, // source maps for debugging compiled JS
+
+    // -------------------------------------------------------------------------
+    // Strict type-checking — all flags listed explicitly for visibility
+    // -------------------------------------------------------------------------
+    "strict": true, // umbrella: enables all flags below
+    "noImplicitAny": true, // ban implicit `any` inferences
+    "strictNullChecks": true, // null/undefined are not assignable to other types
+    "strictFunctionTypes": true, // stricter checking of function parameter types
+    "strictBindCallApply": true, // type-check bind/call/apply arguments
+    "strictPropertyInitialization": true, // class properties must be initialised in constructor
+    "noImplicitThis": true, // error on `this` with implicit `any` type
+    "useUnknownInCatchVariables": true, // catch clause variables are `unknown`, not `any`
+    "alwaysStrict": true, // emit "use strict" in every output file
+
+    // -------------------------------------------------------------------------
+    // Additional correctness checks
+    // -------------------------------------------------------------------------
+    "noUnusedLocals": true, // error on declared-but-unused local variables
+    "noUnusedParameters": true, // error on declared-but-unused function parameters
+    "noImplicitReturns": true, // every code path in a function must return a value
+    "noFallthroughCasesInSwitch": true, // switch cases must break/return/throw
+    "noUncheckedIndexedAccess": true, // array[i] and obj[key] return T | undefined
+    "noPropertyAccessFromIndexSignature": true, // require bracket notation for index-sig access
+    "exactOptionalPropertyTypes": true, // optional props cannot be explicitly set to undefined
+    "noImplicitOverride": true, // subclass overrides must use the `override` keyword
+
+    // -------------------------------------------------------------------------
+    // Interop & resolution
+    // -------------------------------------------------------------------------
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "isolatedModules": true, // each file must be independently transpilable (safe for ts-jest/esbuild)
+    "skipLibCheck": true // skip type-checking of .d.ts in node_modules (faster builds)
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "src/__tests__"]

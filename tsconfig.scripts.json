@@ -1,11 +1,18 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    // Scripts run via tsx/ts-node — no emit needed, just type-checking.
     "rootDir": ".",
     "outDir": "dist-scripts",
     "noEmit": true,
+
+    // Scripts use DOM fetch API (native in Node 18+) and Node built-ins.
     "lib": ["ES2022", "DOM"],
-    "types": ["node"]
+    "types": ["node"],
+
+    // Scripts use dynamic import() for provider lazy-loading — allow it.
+    "module": "CommonJS",
+    "moduleResolution": "bundler"
   },
   "include": ["scripts/**/*.ts"]
 }

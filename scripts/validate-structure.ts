@@ -42,13 +42,21 @@ function collectSourceFiles(dir: string, base: string = ''): string[] {
     const rel = base ? `${base}/${entry.name}` : entry.name;
 
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS.has(entry.name)) continue;
+      if (EXCLUDED_DIRS.has(entry.name)) {
+        continue;
+      }
       results.push(...collectSourceFiles(path.join(dir, entry.name), rel));
     } else if (entry.isFile()) {
       const ext = path.extname(entry.name);
-      if (EXCLUDED_EXTENSIONS.has(ext)) continue;
-      if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts')) continue;
-      if (ext === '.ts') results.push(rel);
+      if (EXCLUDED_EXTENSIONS.has(ext)) {
+        continue;
+      }
+      if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts')) {
+        continue;
+      }
+      if (ext === '.ts') {
+        results.push(rel);
+      }
     }
   }
 
@@ -70,13 +78,15 @@ function expectedTestDir(sourceRelPath: string): string {
  * Returns true if the test directory exists and contains at least one .test.ts file.
  */
 function hasTestCoverage(testDir: string): boolean {
-  if (!fs.existsSync(testDir)) return false;
+  if (!fs.existsSync(testDir)) {
+    return false;
+  }
   const files = fs.readdirSync(testDir);
   return files.some((f) => f.endsWith('.test.ts') || f.endsWith('.spec.ts'));
 }
 
 function main(): void {
-  if (process.env.SKIP_STRUCTURE_CHECK === '1') {
+  if (process.env['SKIP_STRUCTURE_CHECK'] === '1') {
     log('SKIP_STRUCTURE_CHECK=1 — skipping structure validation.');
     return;
   }

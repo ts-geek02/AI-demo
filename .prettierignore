@@ -1,3 +1,9 @@
 dist/
+dist-scripts/
 node_modules/
 coverage/
+*.min.js
+*.min.css
+scripts/deploy/**/*.sh
+scripts/deploy/**/*.yaml
+scripts/deploy/**/*.yml

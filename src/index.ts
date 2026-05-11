@@ -1,7 +1,7 @@
-import express, { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
+const PORT = process.env['PORT'] ?? 3000;
 
 app.get('/health', (_req: Request, res: Response): void => {
   res.status(200).json({ status: 'ok' });
@@ -18,12 +18,13 @@ function isRunDirectly(): boolean {
     return require.main === require.cache[require.resolve('./index')] || require.main === module;
   } catch {
     // ESM environment: require is not defined; check argv instead
-    return process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js') || false;
+    return process.argv[1]?.endsWith('index.ts') ?? process.argv[1]?.endsWith('index.js') ?? false;
   }
 }
 
 if (isRunDirectly()) {
   const server = app.listen(PORT, (): void => {
+    // eslint-disable-next-line no-console -- intentional startup log, no logger available yet
     console.log(`Server running on port ${PORT}`);
   });
 

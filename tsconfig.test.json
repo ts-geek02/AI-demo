@@ -1,7 +1,21 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "jest"]
+    // ts-jest 29 requires "node" moduleResolution. TypeScript 6 deprecated
+    // the alias "node" (which maps to "node10") — suppress the warning with
+    // ignoreDeprecations until ts-jest 30 adds full TS6 support.
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "types": ["node", "jest"],
+
+    // Relax a few strict rules that are impractical in test files:
+    "noUnusedLocals": false, // test helpers / fixtures are often declared but not "used" by TS
+    "noUnusedParameters": false, // mock callbacks frequently have unused params
+    "exactOptionalPropertyTypes": false, // test factories often build partial objects
+    "noUncheckedIndexedAccess": false, // array[i] assertions are common in tests
+    "noPropertyAccessFromIndexSignature": false // test objects often use index signatures
   },
-  "include": ["src/__tests__/**/*.ts"]
+  "include": ["src/__tests__/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

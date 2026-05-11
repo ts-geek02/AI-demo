@@ -22,7 +22,7 @@ function startServer(port: number): Promise<{ kill: () => void }> {
       process.cwd(),
       'node_modules',
       '.bin',
-      'tsx' + (process.platform === 'win32' ? '.cmd' : ''),
+      `tsx${process.platform === 'win32' ? '.cmd' : ''}`,
     );
     const proc = spawn(tsxBin, ['src/index.ts'], {
       env: { ...process.env, PORT: String(port) },
@@ -85,7 +85,12 @@ describe('Property: Port resolution uses environment variable when set', () => {
           // Faker generates a random high port (3001–9999) to avoid conflicts
           const port = faker.internet.port();
           // Clamp to safe range: avoid well-known ports and port 3000
-          const safePort = port < 3001 ? port + 3001 : port > 9999 ? 9999 : port;
+          let safePort = port;
+          if (safePort < 3001) {
+            safePort = safePort + 3001;
+          } else if (safePort > 9999) {
+            safePort = 9999;
+          }
 
           let server: { kill: () => void } | null = null;
           try {
@@ -95,7 +100,9 @@ describe('Property: Port resolution uses environment variable when set', () => {
           } finally {
             if (server) {
               server.kill();
-              await new Promise((r) => setTimeout(r, 100));
+              await new Promise<void>((r) => {
+                setTimeout(r, 100);
+              });
             }
           }
         },
